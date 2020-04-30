@@ -18,7 +18,7 @@ const uint16_t this_node = 01;   // Address of this node in Octal format ( 04,03
 const uint16_t nodo_reloj = 00;
 struct datos_RF {                 // Estructura de envíos y recepciones.
 	byte tipoDato;
-	unsigned long dato;
+	long dato;
 };
 
 // Display i2c connection pins (Digital Pins)
@@ -31,17 +31,26 @@ struct datos_RF {                 // Estructura de envíos y recepciones.
 
 TM1637Display display(CLK, DIO);
 
+
+
+//La estructura de las alarmas.
+struct Alarmas {
+	bool IsSelected = 0;//la hemos seleccionado?
+	byte pinDeLED;//El pin que usaremos para el led.
+	byte pinDeBoton;//El pin que usaremos para el botón relacionado.
+	bool timerIsOn = 0;//El timer está corriendo y no en pausa.
+	bool flagAlarmaReconocida = 0;//Hemos reconocido esta alarma tras pitar?
+	int tiempoReal = 0;//El tiempo en segundos que quedan en el timer.
+	int tiempoProgramado=0;//El tiempo en segundos programado para el timer.
+	unsigned long millisFinTimer = 0;//El momento en millis que acabará la alarma.
+	bool soyTimer1 = 0;//El que tenga un 1 será el que mostremos en pantalla.
+};
+Alarmas alarma0;
+Alarmas alarma1;//Creo las dos alarmas.
+
 volatile int valor = 0;//La variable que alteramos con la ruleta.
-int tiempoProgramado0 = 0;//El tiempo en segundos programado para el timer.
-int tiempoReal0 = 0;//El tiempo en segundos que quedan en el timer.
-int tiempoProgramado1 = 0;//El tiempo en segundos programado para el timer.
-int tiempoReal1 = 0;//El tiempo en segundos que quedan en el timer.
-bool timer0IsOn = 0;//Si=1, estamos contando atrás.
-bool timer1IsOn = 0;//Si=1, estamos contando atrás.
-bool flagAlarma0 = 0;//Si=1, aún no hemos reconocido la alarma.
-bool flagAlarma1 = 0;//Si=1, aún no hemos reconocido la alarma.
 byte secondPrev; //Lo usaré para ir restando segundos al contador.
-bool selected = 0;//Si=0, hablamos de timer0.
+bool whoIsSelected = 0;//Si=0, hablamos de timer0.
 unsigned long nextTimeQuery = 0;//Tiempo entre preguntas al arduino nodriza por la hora.
 bool flagTiempoEs0 = 0;//Cuando haya que pitar! 
 unsigned long finPitido;//El momento en millis donde parará el pitido.
@@ -51,7 +60,12 @@ unsigned long standByTimeOut;//Alcanzado un determinado valor, pone el equipo en
 bool tenemosHora = 0;//Hemos adquirido la hora del arduino principal.
 int contador;//Esta variable va sumándose y altera con el tiempo otras variables.
 
-byte hora[3];
+struct Horas {
+	byte hora;
+	byte minuto;
+	byte segundo;
+};
+Horas Hora;//Creo una instancia de la estructura.
 
 //Declaraciones de funciones:
 void sumador();
@@ -66,7 +80,7 @@ void ordenarTimers();
 void mostrarHora();
 void emisionFR24(byte);
 void recepcionDatos();
-void ajustarHora(long int);
+void ajustarHora(long);
 
 void setup()
 {
@@ -76,18 +90,24 @@ void setup()
 	network.begin(90,this_node);
 
 	display.setBrightness(7, true); // Turn on
-	display.showNumberDec(14, false, 2, 1); // Expect: _14_ //True hace ceros por delante.
+	//display.showNumberDec(14, false, 2, 1); // Expect: _14_ //True hace ceros por delante.
 	//delay(2444);
 	//display.showNumberDecEx(6634, B01000000, false, 4, 0);
 	//delay(2444);
 	
-
+	//Inputs
 	pinMode(3, INPUT);//El pin de las interrupciones. Rotatory encoder.
 	pinMode(14, INPUT);//El otro pin implicado, del botón. Rotatory encoder.
 	pinMode(15, INPUT);//Pulsador del botón. Rotatory encoder.
+	alarma0.pinDeBoton = B_TIMER0;//Le asigno el botón que tiene.
+	alarma1.pinDeBoton = B_TIMER1;
 	pinMode(B_TIMER0, INPUT);//Botón timer0.
 	pinMode(B_TIMER1, INPUT);//Botón timer1.
+
+	//Outputs
 	pinMode(16, OUTPUT);//Zumbador.
+	alarma0.pinDeLED = L_TIMER0;
+	alarma0.pinDeLED = L_TIMER1;
 	pinMode(L_TIMER0, OUTPUT);//Led timer0.
 	pinMode(L_TIMER1, OUTPUT);//Led timer1.
 	digitalWrite(3, 1);//PullUpResistors.
@@ -101,10 +121,10 @@ void setup()
 void loop()
 {
 	/*
-	Serial.print(flagAlarma0);
-	Serial.print(flagAlarma1);
+	Serial.print(alarma0.flagAlarmaReconocida);
+	Serial.print(alarma1.flagAlarmaReconocida);
 	Serial.print(standBy);
-	Serial.print(selected);
+	Serial.print(whoIsSelected);
 	Serial.print(" ");
 	Serial.print(tenemosHora);
 	Serial.print(hour());
@@ -142,13 +162,13 @@ void loop()
 		auxContador = contador * 2;
 	else
 		auxContador = 250 - (contador - 125) * 2;
-	if (standBy) {//En standBy no usamos selected
-		if (timer0IsOn)
+	if (standBy) {//En standBy no usamos whoIsSelected
+		if (alarma0.timerIsOn)
 			analogWrite(L_TIMER0, auxContador);
-		if (timer1IsOn)
+		if (alarma1.timerIsOn)
 			analogWrite(L_TIMER1, auxContador);
 	}
-	else if (selected) {
+	else if (whoIsSelected) {
 		digitalWrite(L_TIMER1, 1);
 		//Iluminar continuo BOTON1.
 	}
@@ -157,13 +177,13 @@ void loop()
 		//Iluminar continuo BOTON0.
 	}
 
-	if (flagAlarma0)
+	if (alarma0.flagAlarmaReconocida)
 		if (contador < 110)
 			digitalWrite(L_TIMER0, 0);
 		else
 			digitalWrite(L_TIMER0, 1);
 		//Destellos contador de timer0
-	if(flagAlarma1)
+	if(alarma1.flagAlarmaReconocida)
 		if (contador < 110)
 			digitalWrite(L_TIMER1, 0);
 		else
@@ -173,11 +193,11 @@ void loop()
 
 
 	///Qué mostramos en los displays:
-	if (timer0IsOn) {//Primero siempre el timer0.
-		display.showNumberDecEx(numeroASegMin(tiempoReal0), B01000000, true, 4, 0);
+	if (alarma0.timerIsOn) {//Primero siempre el timer0.
+		display.showNumberDecEx(numeroASegMin(alarma0.tiempoReal), B01000000, true, 4, 0);
 	}
-	else if (timer1IsOn) {//Después timer1.
-		display.showNumberDecEx(numeroASegMin(tiempoReal1), B01000000, true, 4, 0);
+	else if (alarma1.timerIsOn) {//Después timer1.
+		display.showNumberDecEx(numeroASegMin(alarma1.tiempoReal), B01000000, true, 4, 0);
 	}
 	else//Si están los 2 timers parados:
 	{
@@ -196,19 +216,19 @@ void loop()
 	///Pulsamos alguno de los dos botoncitos:
 	if (!digitalRead(B_TIMER0)) {//Recuerda que debe dar un 0 cuando lo pulsamos.
 		flagInteract = 1;//Hemos interactuado.
-		flagAlarma0 = 0;
+		alarma0.flagAlarmaReconocida = 0;
 		delay(25);
 		while (!digitalRead(B_TIMER0));//Esperamos a que lo suelte.
-		selected = 0;
+		whoIsSelected = 0;
 		digitalWrite(L_TIMER1, 0); //Apagamos el otro botón.
 	}
 
 	if (!digitalRead(B_TIMER1)) {//Recuerda que debe dar un 0 cuando lo pulsamos.
 		flagInteract = 1;//Hemos interactuado.
-		flagAlarma1 = 0;
+		alarma1.flagAlarmaReconocida = 0;
 		delay(25);
 		while (!digitalRead(B_TIMER1));//Esperamos a que lo suelte.
-		selected = 1;
+		whoIsSelected = 1;
 		digitalWrite(L_TIMER0, 0); //Apagamos el otro botón.
 	}
 
@@ -218,26 +238,26 @@ void loop()
 		delay(100);//ELIMINAR, reduce los rebotes.
 		while (!digitalRead(15));//Me espero hasta que suelte el botón.
 
-		if(selected)//Estamos hablando de timer1.
-			if (timer1IsOn) {//Paramos el timer.
-				timer1IsOn = 0;
+		if(whoIsSelected)//Estamos hablando de timer1.
+			if (alarma1.timerIsOn) {//Paramos el timer.
+				alarma1.timerIsOn = 0;
 			}
 			else
 			{
-				if (tiempoProgramado1 > 0) {
-					timer1IsOn = 1;
-					tiempoReal1 = tiempoProgramado1;
+				if (alarma1.tiempoProgramado > 0) {
+					alarma1.timerIsOn = 1;
+					alarma1.tiempoReal = alarma1.tiempoProgramado;
 				}
 			}
 		else//Hablamos de timer0.
-			if (timer0IsOn) {
-				timer0IsOn = 0;
+			if (alarma0.timerIsOn) {
+				alarma0.timerIsOn = 0;
 			}
 			else
 			{
-				if (tiempoProgramado0 > 0) {
-					timer0IsOn = 1;
-					tiempoReal0 = tiempoProgramado0;
+				if (alarma0.tiempoProgramado > 0) {
+					alarma0.timerIsOn = 1;
+					alarma0.tiempoReal = alarma0.tiempoProgramado;
 				}
 			}
 		ordenarTimers();

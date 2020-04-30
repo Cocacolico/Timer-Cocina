@@ -4,7 +4,7 @@ void mostrarHora() {
 	//Primero genero el número.
 	muestra = hour() * 100 + minute();
 	//Luego muestro la hora, parpadeando.
-	if (millis() % 1000 < 500)
+	if (millis() % 2000 < 1000)
 		display.showNumberDec(muestra, true, 4, 0);
 	else
 		display.showNumberDecEx(muestra, B01000000, true, 4, 0);
@@ -19,7 +19,7 @@ void emisionFR24(byte opcion) {
 	{
 	case 1://Vamos a enviar el timer actual activo.
 		informacionSale.tipoDato = 1;
-		informacionSale.dato = tiempoReal0;
+		informacionSale.dato = alarma0.tiempoReal;
 		break;
 	case 2://Vamos a anular el timer.
 		informacionSale.tipoDato = 2;
@@ -41,7 +41,7 @@ void emisionFR24(byte opcion) {
 }
 
 void recepcionDatos() {
-	long int incomingData;
+	long incomingData;
 	while (network.available()) { // While there is data ready
 		RF24NetworkHeader header;
 		network.read(header, &incomingData, sizeof(incomingData));
@@ -50,11 +50,11 @@ void recepcionDatos() {
 	ajustarHora(incomingData);
 }
 
-void ajustarHora(long int datos) {
+void ajustarHora(long datos) {
 	//Primero convierto el tipo de dato:
-	hora[2] = datos % 100;//Segundos.
-	hora[0] = datos / 10000;//Horas.
-	datos = datos / 100;
-	hora[1] = datos % 100;//Minutos.
-	setTime(hora[0], hora[1], hora[2], 1, 1, 2000);
+	Hora.segundo = datos % 60;//Segundos.
+	Hora.hora = datos / 3600;//Horas.
+	datos = datos / 60;
+	Hora.minuto = datos % 60;//Minutos.
+	setTime(Hora.hora, Hora.minuto, Hora.segundo, 1, 1, 2000);
 }
