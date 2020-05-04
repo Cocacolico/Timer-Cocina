@@ -269,6 +269,7 @@ void loop()
 	if(nextTimeQuery < millis())//Entraremos al principio y luego de vez en cuando.
 		if (tenemosHora) {
 			nextTimeQuery = 604800000 + millis();//Una semana en segundos.
+			emisionFR24(8);//Ocho es el número que quiere el otro arduino.
 		}
 		else
 		{

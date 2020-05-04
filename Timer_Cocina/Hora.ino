@@ -37,7 +37,9 @@ void emisionFR24(byte opcion) {
 		ok = network.write(header2, &informacionSale, sizeof(informacionSale)); // Send the data
 		delay(20);
 		i++;
-	} while (!ok || i > 10);
+		if (ok)
+			break;
+	} while (i > 5);
 }
 
 void recepcionDatos() {
