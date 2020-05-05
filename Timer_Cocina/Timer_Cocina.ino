@@ -77,10 +77,10 @@ void pitarSi();
 void pitarNo();
 void ordenarTimers();
 void mostrarHora();
-void emisionFR24(byte);
+void preparacionEmisionRF24(byte);
 void recepcionDatos();
 void ajustarHora(long);
-
+void emisionRF24(datos_RF);
 
 void setup()
 {
@@ -115,6 +115,11 @@ void setup()
 	digitalWrite(B_TIMER0, 1);
 	digitalWrite(B_TIMER1, 1);
 
+	//Valores por defecto de los temporizadores:
+	alarma0.tiempoProgramado = 300;//Cinco minutos.
+	alarma1.tiempoProgramado = 900;//Quince minutos.
+
+
 	//Inicializamos la interrupción del rotatory encoder.
 	attachInterrupt(digitalPinToInterrupt(3), sumador, RISING);
 }
@@ -132,13 +137,19 @@ void loop()
 	if (network.available())
 		recepcionDatos();
 
+
+	///Stand by.
 	if(flagInteract){
 		standByTimeOut = millis() + 5000;//El equipo pasa a descansar en 5 segundos.
 		flagInteract = 0;
 		standBy = 0;
 	}
-	if (standByTimeOut < millis()) {
+	if (standByTimeOut < millis() && !standBy) {//Han pasado cinco segundos, entramos en standby.
 		standBy = 1;
+		if (alarma1.IsSelected)//Con estas 4 líneas alineamos el botón central con lo que se muestra en pantalla.
+			whoIsSelected = 1;
+		else
+			whoIsSelected = 0;
 	}
 
 	///Muestra de la luz de los botones:
@@ -245,6 +256,7 @@ void loop()
 		if(whoIsSelected)//Estamos hablando de timer1.
 			if (alarma1.timerIsOn) {//Paramos el timer.
 				alarma1.timerIsOn = 0;
+				alarma1.IsSelected = 0;
 			}
 			else
 			{
@@ -257,6 +269,7 @@ void loop()
 		else//Hablamos de timer0.
 			if (alarma0.timerIsOn) {
 				alarma0.timerIsOn = 0;
+				alarma0.IsSelected = 0;
 			}
 			else
 			{
@@ -275,12 +288,12 @@ void loop()
 	if(nextTimeQuery < millis())//Entraremos al principio y luego de vez en cuando.
 		if (tenemosHora) {
 			nextTimeQuery = 604800000 + millis();//Una semana en segundos.
-			emisionFR24(8);//Ocho es el número que quiere el otro arduino.
+			preparacionEmisionRF24(8);//Ocho es el número que quiere el otro arduino.
 		}
 		else
 		{
 			nextTimeQuery = 3600000 + millis();//Preguntaremos cada hora.
-			emisionFR24(8);//Ocho es el número que quiere el otro arduino.
+			preparacionEmisionRF24(8);//Ocho es el número que quiere el otro arduino.
 		}
 
 	
