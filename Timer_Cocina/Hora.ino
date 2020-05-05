@@ -19,7 +19,10 @@ void emisionFR24(byte opcion) {
 	{
 	case 1://Vamos a enviar el timer actual activo.
 		informacionSale.tipoDato = 1;
-		informacionSale.dato = alarma0.tiempoReal;
+		if (alarma0.IsSelected)
+			informacionSale.dato = alarma0.tiempoReal;
+		else
+			informacionSale.dato = alarma1.tiempoReal;
 		break;
 	case 2://Vamos a anular el timer.
 		informacionSale.tipoDato = 2;
@@ -52,6 +55,7 @@ void recepcionDatos() {
 	ajustarHora(incomingData);
 }
 
+//Actualizamos en el sistema la hora que introduzcamos en segundos.
 void ajustarHora(long datos) {
 	//Primero convierto el tipo de dato:
 	Hora.segundo = datos % 60;//Segundos.

@@ -12,7 +12,7 @@
 #include <RF24.h>
 //#include <RF24_config.h>
 //        CE, CSN
-RF24 radio(9, 10);
+RF24 radio(8, 10);//OJO!! En la placa están puestos los pines 9,10.
 RF24Network network(radio);      // Include the radio in the network
 const uint16_t this_node = 01;   // Address of this node in Octal format ( 04,031, etc)
 const uint16_t nodo_reloj = 00;
@@ -27,7 +27,7 @@ struct datos_RF {                 // Estructura de envíos y recepciones.
 #define B_TIMER0 17
 #define B_TIMER1 18
 #define L_TIMER0 6 
-#define L_TIMER1 8
+#define L_TIMER1 9//OJO!! En la placa está puesto el pin D8.
 
 TM1637Display display(CLK, DIO);
 
@@ -35,11 +35,11 @@ TM1637Display display(CLK, DIO);
 
 //La estructura de las alarmas.
 struct Alarmas {
-	bool IsSelected = 0;//la hemos seleccionado?
+	bool IsSelected = 0;//Un 1 implica que está activa y es la primera en acabar.
 	byte pinDeLED;//El pin que usaremos para el led.
 	byte pinDeBoton;//El pin que usaremos para el botón relacionado.
 	bool timerIsOn = 0;//El timer está corriendo y no en pausa.
-	bool flagAlarmaReconocida = 0;//Hemos reconocido esta alarma tras pitar?
+	bool flagAlarmaReconocida = 1;//Hemos reconocido esta alarma tras pitar?
 	int tiempoReal = 0;//El tiempo en segundos que quedan en el timer.
 	int tiempoProgramado=0;//El tiempo en segundos programado para el timer.
 	unsigned long millisFinTimer = 0;//El momento en millis que acabará la alarma.
@@ -50,7 +50,7 @@ Alarmas alarma1;//Creo las dos alarmas.
 
 volatile int valor = 0;//La variable que alteramos con la ruleta.
 byte secondPrev; //Lo usaré para ir restando segundos al contador.
-bool whoIsSelected = 0;//Si=0, hablamos de timer0.
+bool whoIsSelected = 0;//Si=0, hablamos de timer0. Se usa para cuando interactuamos.
 unsigned long nextTimeQuery = 0;//Tiempo entre preguntas al arduino nodriza por la hora.
 bool flagTiempoEs0 = 0;//Cuando haya que pitar! 
 unsigned long finPitido;//El momento en millis donde parará el pitido.
@@ -75,12 +75,12 @@ void cuentaAtras();
 void tiempoEs0();
 void pitarSi();
 void pitarNo();
-int tiempoSeleccionado();
 void ordenarTimers();
 void mostrarHora();
 void emisionFR24(byte);
 void recepcionDatos();
 void ajustarHora(long);
+
 
 void setup()
 {
@@ -115,25 +115,13 @@ void setup()
 	digitalWrite(B_TIMER0, 1);
 	digitalWrite(B_TIMER1, 1);
 
+	//Inicializamos la interrupción del rotatory encoder.
 	attachInterrupt(digitalPinToInterrupt(3), sumador, RISING);
 }
 
 void loop()
 {
-	/*
-	Serial.print(alarma0.flagAlarmaReconocida);
-	Serial.print(alarma1.flagAlarmaReconocida);
-	Serial.print(standBy);
-	Serial.print(whoIsSelected);
-	Serial.print(" ");
-	Serial.print(tenemosHora);
-	Serial.print(hour());
-	Serial.print(minute());
-	Serial.print("  ");
-	Serial.print(hora[0]);
-	Serial.println(hora[1]);
-	*/
-
+	
 
 	procesadoDeValor();
 	cuentaAtras();
@@ -145,7 +133,7 @@ void loop()
 		recepcionDatos();
 
 	if(flagInteract){
-		standByTimeOut = millis() + 10000;//El equipo pasa a descansar en 10 segundos.
+		standByTimeOut = millis() + 5000;//El equipo pasa a descansar en 5 segundos.
 		flagInteract = 0;
 		standBy = 0;
 	}
@@ -155,18 +143,32 @@ void loop()
 
 	///Muestra de la luz de los botones:
 	byte auxContador;
-	contador++;
+	contador += 3;
 	if (contador > 250)
 		contador = 0;
 	if (contador < 125)
 		auxContador = contador * 2;
 	else
 		auxContador = 250 - (contador - 125) * 2;
+
+
 	if (standBy) {//En standBy no usamos whoIsSelected
 		if (alarma0.timerIsOn)
 			analogWrite(L_TIMER0, auxContador);
+		else if (!alarma0.flagAlarmaReconocida)
+			if (contador < 110)
+				digitalWrite(L_TIMER0, 0);
+			else
+				digitalWrite(L_TIMER0, 1);
+		//Destellos contador de timer0
 		if (alarma1.timerIsOn)
 			analogWrite(L_TIMER1, auxContador);
+		else if (!alarma1.flagAlarmaReconocida)
+			if (contador < 110)
+				digitalWrite(L_TIMER1, 0);
+			else
+				digitalWrite(L_TIMER1, 1);
+		//Destellos contador de timer1.
 	}
 	else if (whoIsSelected) {
 		digitalWrite(L_TIMER1, 1);
@@ -177,46 +179,48 @@ void loop()
 		//Iluminar continuo BOTON0.
 	}
 
-	if (alarma0.flagAlarmaReconocida)
-		if (contador < 110)
-			digitalWrite(L_TIMER0, 0);
-		else
-			digitalWrite(L_TIMER0, 1);
-		//Destellos contador de timer0
-	if(alarma1.flagAlarmaReconocida)
-		if (contador < 110)
-			digitalWrite(L_TIMER1, 0);
-		else
-			digitalWrite(L_TIMER1, 1);
-		//Destellos contador de timer1.
 	
 
 
 	///Qué mostramos en los displays:
-	if (alarma0.timerIsOn) {//Primero siempre el timer0.
-		display.showNumberDecEx(numeroASegMin(alarma0.tiempoReal), B01000000, true, 4, 0);
-	}
-	else if (alarma1.timerIsOn) {//Después timer1.
-		display.showNumberDecEx(numeroASegMin(alarma1.tiempoReal), B01000000, true, 4, 0);
-	}
-	else//Si están los 2 timers parados:
-	{
-		if (flagTiempoEs0 == 0)
-			if (standBy == 0)
-				display.showNumberDecEx(numeroASegMin(tiempoSeleccionado()), B01000000, true, 4, 0);
-			else if (tenemosHora)
-				mostrarHora();
-			else//No tenemos hora y estamos en standBy:
-				display.clear();
-		else //FlagTiempoEs0=1, mostramos 00:00. Y muestro los dos puntos, el timer está parado.
+	if(standBy){
+		if(flagTiempoEs0)//FlagTiempoEs0=1, mostramos 00:00. Y muestro los dos puntos, el timer está parado.
 			display.showNumberDecEx(numeroASegMin(0), B01000000, true, 4, 0);
-		
+		else if (alarma0.IsSelected)//Muestro esta alarma.
+			display.showNumberDecEx(numeroASegMin(alarma0.tiempoReal), B01000000, true, 4, 0);
+		else if (alarma1.IsSelected)//Muestro esta alarma.
+			display.showNumberDecEx(numeroASegMin(alarma1.tiempoReal), B01000000, true, 4, 0);
+		else if (tenemosHora)//Si están los dos temporizadores parados, entonces mostramos la hora.
+			mostrarHora();
+		else//No tenemos hora y estamos en standBy:
+			display.clear();
 	}
+	else//No estamos en stand by:
+	{
+		if (!whoIsSelected) {//Empiezo por timer0.
+			if(alarma0.timerIsOn)
+				display.showNumberDecEx(numeroASegMin(alarma0.tiempoReal), B01000000, true, 4, 0);
+			else
+				display.showNumberDecEx(numeroASegMin(alarma0.tiempoProgramado), B01000000, true, 4, 0);
+		}
+		else
+		{
+			if (alarma1.timerIsOn)
+				display.showNumberDecEx(numeroASegMin(alarma1.tiempoReal), B01000000, true, 4, 0);
+			else
+				display.showNumberDecEx(numeroASegMin(alarma1.tiempoProgramado), B01000000, true, 4, 0);
+		}
+	}
+
+
+
 	
+
+
 	///Pulsamos alguno de los dos botoncitos:
 	if (!digitalRead(B_TIMER0)) {//Recuerda que debe dar un 0 cuando lo pulsamos.
 		flagInteract = 1;//Hemos interactuado.
-		alarma0.flagAlarmaReconocida = 0;
+		alarma0.flagAlarmaReconocida = 1;
 		delay(25);
 		while (!digitalRead(B_TIMER0));//Esperamos a que lo suelte.
 		whoIsSelected = 0;
@@ -225,7 +229,7 @@ void loop()
 
 	if (!digitalRead(B_TIMER1)) {//Recuerda que debe dar un 0 cuando lo pulsamos.
 		flagInteract = 1;//Hemos interactuado.
-		alarma1.flagAlarmaReconocida = 0;
+		alarma1.flagAlarmaReconocida = 1;
 		delay(25);
 		while (!digitalRead(B_TIMER1));//Esperamos a que lo suelte.
 		whoIsSelected = 1;
@@ -246,6 +250,7 @@ void loop()
 			{
 				if (alarma1.tiempoProgramado > 0) {
 					alarma1.timerIsOn = 1;
+					alarma1.flagAlarmaReconocida = 1;
 					alarma1.tiempoReal = alarma1.tiempoProgramado;
 				}
 			}
@@ -257,6 +262,7 @@ void loop()
 			{
 				if (alarma0.tiempoProgramado > 0) {
 					alarma0.timerIsOn = 1;
+					alarma0.flagAlarmaReconocida = 1;
 					alarma0.tiempoReal = alarma0.tiempoProgramado;
 				}
 			}

@@ -18,14 +18,14 @@ void procesadoDeValor() {
 	if (valor > 180)
 		valor = 180;
 	if(whoIsSelected)
-		alarma1.tiempoProgramado = valor * 15;
+		alarma1.tiempoProgramado = valor * 30;
 	else
-		alarma0.tiempoProgramado = valor * 15;
+		alarma0.tiempoProgramado = valor * 30;
 
 
 }
 
-
+//Para hacer números que el display muestre correctamente.
 int numeroASegMin(int entrada) {
 	int salida=0;
 	while (entrada > 59) {
@@ -36,24 +36,26 @@ int numeroASegMin(int entrada) {
 	return salida;
 }
 
-//La acción que cuenta atrás lo que esté activo y activa el flag de sonería.
+//La acción que cuenta atrás lo que esté activo y activa el flag de sonería al acabar.
 void cuentaAtras() {
 	if (secondPrev != second()) {
 		if (alarma0.timerIsOn)alarma0.tiempoReal--;
 		if (alarma1.timerIsOn)alarma1.tiempoReal--;
 	}
-	if (!alarma0.tiempoReal && alarma0.timerIsOn) {//Tiene que pitar timer0.
+	if (!alarma0.tiempoReal && alarma0.timerIsOn) {//Timer0 ha llegado a 0 segundos, ha de pitar.
 		alarma0.timerIsOn = 0;
-		flagInteract = 1;//Mantenemos el standBy fuera durante 10 segs.
+		//flagInteract = 1;//Mantenemos el standBy fuera durante 5 segs.
 		flagTiempoEs0 = 1;
-		alarma0.flagAlarmaReconocida = 1;
+		alarma0.IsSelected = 0;//Esto hará que no pueda mostrarse en pantalla.
+		alarma0.flagAlarmaReconocida = 0;
 		finPitido = millis() + 3000;
 	}
 	if (!alarma1.tiempoReal && alarma1.timerIsOn) {//Tiene que pitar timer1.
 		alarma1.timerIsOn = 0;
-		flagInteract = 1;//Mantenemos el standBy fuera durante 10 segs.
-		alarma1.flagAlarmaReconocida = 1;
+		//flagInteract = 1;//Mantenemos el standBy fuera durante 5 segs.
 		flagTiempoEs0 = 1;
+		alarma1.IsSelected = 0;//Esto hará que no pueda mostrarse en pantalla.
+		alarma1.flagAlarmaReconocida = 0;
 		finPitido = millis() + 3000;
 	}
 	secondPrev = second();
@@ -96,38 +98,39 @@ void pitarNo() {
 	digitalWrite(16, 0);
 }
 
-//Devuelve tiempoProgramado según lo que esté seleccionado.
-int tiempoSeleccionado() {
-	if (whoIsSelected)
-		return alarma1.tiempoProgramado;
-	else
-		return alarma0.tiempoProgramado;
-}
+
 
 //Si timer0 acaba más tarde que timer1, estando encendidos los dos, los cambio de orden.
 //Si timer0 no está activo y timer1 sí, los cambio de orden.
 void ordenarTimers() {
 	int AUX1;
 	if (alarma0.timerIsOn & alarma1.timerIsOn) //Nótese que no es un AND normal, tienen que dar los dos 1.
-		if (alarma0.tiempoReal > alarma1.tiempoReal) {//Hemos de cambiarlos.
-			AUX1 = alarma0.tiempoReal;
-			alarma0.tiempoReal = alarma1.tiempoReal;
-			alarma1.tiempoReal = AUX1; 
-			AUX1 = alarma0.tiempoProgramado;
-			alarma0.tiempoProgramado = alarma1.tiempoProgramado;
-			alarma1.tiempoProgramado = AUX1;
+		if (alarma0.tiempoReal > alarma1.tiempoReal) {//Elegimos el que acaba antes.
+			alarma0.IsSelected = 0;
+			alarma1.IsSelected = 1;
 		}
-	if (alarma0.timerIsOn == 0 && alarma1.timerIsOn == 1) {//Otro caso, hemos de mover el de abajo arriba.
-		alarma0.tiempoReal = alarma1.tiempoReal;
-		AUX1 = alarma0.tiempoProgramado;
-		alarma0.tiempoProgramado = alarma1.tiempoProgramado;
-		alarma1.tiempoProgramado = AUX1;
-		alarma0.timerIsOn = 1;
-		alarma1.timerIsOn = 0;
+		else
+		{
+			alarma0.IsSelected = 1;
+			alarma1.IsSelected = 0;
+		}
+
+	//Otros casos, hemos de seleccionar el que se ha quedado huérfano.
+	if (alarma0.timerIsOn == 0 && alarma1.timerIsOn == 1) {
+		alarma1.IsSelected = 1;
 	}
+	if (alarma0.timerIsOn == 1 && alarma1.timerIsOn == 0) {
+		alarma0.IsSelected = 1;
+	}
+
+
 	emisionFR24(1);//Envío timer0 porque sé que es el que menos le queda.
+
+	///PENDIENTE de revisión
+	/*
 	if (!alarma0.timerIsOn && !alarma1.timerIsOn)
 		emisionFR24(2);//Pido apagar el timer en el otro arduino.
+		*/
 }
 
 
