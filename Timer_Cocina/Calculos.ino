@@ -143,4 +143,19 @@ void ordenarTimers() {
 		*/
 }
 
+//La acción que convierte los números para que se muestren correctamente en el display.
+//En dato ponemos el número que queremos mostrar
+//En tipoDato ponemos: 0=Mostrar número sin los dos puntos. 1=Mostrar número con los dos puntos.
+void mostrarDisplay(int dato, byte tipoDato) {
+	// Create array that turns all segments off:
+	
+	switch (tipoDato) {
+	case 0:
 
+		break;
+	case 1:
+
+		break;
+	}
+	//display.setSegments();
+}

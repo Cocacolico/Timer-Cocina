@@ -4,8 +4,9 @@
 #include <RF24Network.h>
 #include <Time.h>
 #include <Arduino.h>
-#include <TM1637Display.h>
+//#include <TM1637Display.h>//LA ORIGINAL.
 #include <TimeLib.h>
+#include <TM1637DisplayAlReves.h>
 
 //#include <nRF24L01.h>
 #include <printf.h>
@@ -29,7 +30,7 @@ struct datos_RF {                 // Estructura de envíos y recepciones.
 #define L_TIMER0 6 
 #define L_TIMER1 9//OJO!! En la placa está puesto el pin D8.
 
-TM1637Display display(CLK, DIO);
+TM1637DisplayAlReves display(CLK, DIO);
 
 
 
@@ -81,6 +82,7 @@ void preparacionEmisionRF24(byte);
 void recepcionDatos();
 void ajustarHora(long);
 void emisionRF24(datos_RF);
+void mostrarDisplay(int,byte);
 
 void setup()
 {
