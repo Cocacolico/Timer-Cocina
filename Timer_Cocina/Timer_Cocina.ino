@@ -1,3 +1,10 @@
+/*
+Proyecto del timer de la cocina.
+Hecho por Álvaro Díaz-Cano en 2019 y completado en mayo de 2020.
+Nodo del nRF24 = 01.
+*/
+
+
 #include <SPI.h>
 #include <Sync.h>
 //#include <RF24Network_config.h>
