@@ -24,6 +24,7 @@ RF24 radio(8, 10);//OJO!! En la placa están puestos los pines 9,10.
 RF24Network network(radio);      // Include the radio in the network
 const uint16_t this_node = 01;   // Address of this node in Octal format ( 04,031, etc)
 const uint16_t nodo_reloj = 00;
+const uint16_t nodo_raspberry = 03;
 struct datos_RF {                 // Estructura de envíos y recepciones.
 	byte tipoDato;
 	long dato;
@@ -94,7 +95,6 @@ void mostrarDisplay(int,byte);
 void setup()
 {
 	SPI.begin();
-	Serial.begin(9600);
 	radio.begin();// Open a writing and reading pipe on each radio, with opposite addresses
 	network.begin(90,this_node);
 
@@ -121,6 +121,7 @@ void setup()
 	pinMode(L_TIMER1, OUTPUT);//Led timer1.
 	digitalWrite(3, 1);//PullUpResistors.
 	digitalWrite(14, 1);//
+	digitalWrite(15, 1);//Esta es la resistencia del botón gordo.
 	digitalWrite(B_TIMER0, 1);
 	digitalWrite(B_TIMER1, 1);
 
@@ -176,19 +177,23 @@ void loop()
 		if (alarma0.timerIsOn)
 			analogWrite(L_TIMER0, auxContador);
 		else if (!alarma0.flagAlarmaReconocida)
-			if (contador < 110)
+			if (contador < 110)//Destellos contador de timer0
 				digitalWrite(L_TIMER0, 0);
 			else
 				digitalWrite(L_TIMER0, 1);
-		//Destellos contador de timer0
+		else//Apagamos esta luz si no hay alarma y ha sido reconocida.
+			digitalWrite(L_TIMER0, 0);
+
 		if (alarma1.timerIsOn)
 			analogWrite(L_TIMER1, auxContador);
 		else if (!alarma1.flagAlarmaReconocida)
-			if (contador < 110)
+			if (contador < 110)//Destellos contador de timer1.
 				digitalWrite(L_TIMER1, 0);
 			else
 				digitalWrite(L_TIMER1, 1);
-		//Destellos contador de timer1.
+		else//Apagamos esta luz si no hay alarma y ha sido reconocida.
+			digitalWrite(L_TIMER1, 0);
+		
 	}
 	else if (whoIsSelected) {
 		digitalWrite(L_TIMER1, 1);
