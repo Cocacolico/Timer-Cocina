@@ -196,12 +196,14 @@ void loop()
 		
 	}
 	else if (whoIsSelected) {
+		digitalWrite(L_TIMER0, 0);
 		digitalWrite(L_TIMER1, 1);
-		//Iluminar continuo BOTON1.
+		//Iluminar continuo BOTON1 y apagar el otro.
 	}
 	else {
+		digitalWrite(L_TIMER1, 0);
 		digitalWrite(L_TIMER0, 1);
-		//Iluminar continuo BOTON0.
+		//Iluminar continuo BOTON0 y apagar el otro.
 	}
 
 	
