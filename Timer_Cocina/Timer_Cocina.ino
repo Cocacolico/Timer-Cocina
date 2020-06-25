@@ -1,9 +1,9 @@
 /*
 Proyecto del timer de la cocina.
-Hecho por Álvaro Díaz-Cano en 2019 y completado en mayo de 2020.
+Hecho por ï¿½lvaro Dï¿½az-Cano en 2019 y completado en mayo de 2020.
 Nodo del nRF24 = 01.
 */
-
+//Test de sincro, versiÃ³n del curro 25-6-20.
 
 #include <SPI.h>
 #include <Sync.h>
@@ -20,12 +20,12 @@ Nodo del nRF24 = 01.
 #include <RF24.h>
 //#include <RF24_config.h>
 //        CE, CSN
-RF24 radio(8, 10);//OJO!! En la placa están puestos los pines 9,10.
+RF24 radio(8, 10);//OJO!! En la placa estï¿½n puestos los pines 9,10.
 RF24Network network(radio);      // Include the radio in the network
 const uint16_t this_node = 01;   // Address of this node in Octal format ( 04,031, etc)
 const uint16_t nodo_reloj = 00;
 const uint16_t nodo_raspberry = 03;
-struct datos_RF {                 // Estructura de envíos y recepciones.
+struct datos_RF {                 // Estructura de envï¿½os y recepciones.
 	byte tipoDato;
 	long dato;
 };
@@ -36,7 +36,7 @@ struct datos_RF {                 // Estructura de envíos y recepciones.
 #define B_TIMER0 17
 #define B_TIMER1 18
 #define L_TIMER0 6 
-#define L_TIMER1 9//OJO!! En la placa está puesto el pin D8.
+#define L_TIMER1 9//OJO!! En la placa estï¿½ puesto el pin D8.
 
 TM1637DisplayAlReves display(CLK, DIO);
 
@@ -44,30 +44,30 @@ TM1637DisplayAlReves display(CLK, DIO);
 
 //La estructura de las alarmas.
 struct Alarmas {
-	bool IsSelected = 0;//Un 1 implica que está activa y es la primera en acabar.
+	bool IsSelected = 0;//Un 1 implica que estï¿½ activa y es la primera en acabar.
 	byte pinDeLED;//El pin que usaremos para el led.
-	byte pinDeBoton;//El pin que usaremos para el botón relacionado.
-	bool timerIsOn = 0;//El timer está corriendo y no en pausa.
+	byte pinDeBoton;//El pin que usaremos para el botï¿½n relacionado.
+	bool timerIsOn = 0;//El timer estï¿½ corriendo y no en pausa.
 	bool flagAlarmaReconocida = 1;//Hemos reconocido esta alarma tras pitar?
 	int tiempoReal = 0;//El tiempo en segundos que quedan en el timer.
 	int tiempoProgramado=0;//El tiempo en segundos programado para el timer.
-	unsigned long millisFinTimer = 0;//El momento en millis que acabará la alarma.
-	bool soyTimer1 = 0;//El que tenga un 1 será el que mostremos en pantalla.
+	unsigned long millisFinTimer = 0;//El momento en millis que acabarï¿½ la alarma.
+	bool soyTimer1 = 0;//El que tenga un 1 serï¿½ el que mostremos en pantalla.
 };
 Alarmas alarma0;
 Alarmas alarma1;//Creo las dos alarmas.
 
 volatile int valor = 0;//La variable que alteramos con la ruleta.
-byte secondPrev; //Lo usaré para ir restando segundos al contador.
+byte secondPrev; //Lo usarï¿½ para ir restando segundos al contador.
 bool whoIsSelected = 0;//Si=0, hablamos de timer0. Se usa para cuando interactuamos.
 unsigned long nextTimeQuery = 0;//Tiempo entre preguntas al arduino nodriza por la hora.
 bool flagTiempoEs0 = 0;//Cuando haya que pitar! 
-unsigned long finPitido;//El momento en millis donde parará el pitido.
-bool flagInteract = 0;//Se pondrá a 1 si interactuamos o el equipo necesita mostrar algo.
-bool standBy = 0;//Si=1, mostramos la hora o el vacío.
+unsigned long finPitido;//El momento en millis donde pararï¿½ el pitido.
+bool flagInteract = 0;//Se pondrï¿½ a 1 si interactuamos o el equipo necesita mostrar algo.
+bool standBy = 0;//Si=1, mostramos la hora o el vacï¿½o.
 unsigned long standByTimeOut;//Alcanzado un determinado valor, pone el equipo en standby.
 bool tenemosHora = 0;//Hemos adquirido la hora del arduino principal.
-int contador;//Esta variable va sumándose y altera con el tiempo otras variables.
+int contador;//Esta variable va sumï¿½ndose y altera con el tiempo otras variables.
 
 struct Horas {
 	byte hora;
@@ -106,12 +106,12 @@ void setup()
 	
 	//Inputs
 	pinMode(3, INPUT);//El pin de las interrupciones. Rotatory encoder.
-	pinMode(14, INPUT);//El otro pin implicado, del botón. Rotatory encoder.
-	pinMode(15, INPUT);//Pulsador del botón. Rotatory encoder.
-	alarma0.pinDeBoton = B_TIMER0;//Le asigno el botón que tiene.
+	pinMode(14, INPUT);//El otro pin implicado, del botï¿½n. Rotatory encoder.
+	pinMode(15, INPUT);//Pulsador del botï¿½n. Rotatory encoder.
+	alarma0.pinDeBoton = B_TIMER0;//Le asigno el botï¿½n que tiene.
 	alarma1.pinDeBoton = B_TIMER1;
-	pinMode(B_TIMER0, INPUT);//Botón timer0.
-	pinMode(B_TIMER1, INPUT);//Botón timer1.
+	pinMode(B_TIMER0, INPUT);//Botï¿½n timer0.
+	pinMode(B_TIMER1, INPUT);//Botï¿½n timer1.
 
 	//Outputs
 	pinMode(16, OUTPUT);//Zumbador.
@@ -121,7 +121,7 @@ void setup()
 	pinMode(L_TIMER1, OUTPUT);//Led timer1.
 	digitalWrite(3, 1);//PullUpResistors.
 	digitalWrite(14, 1);//
-	digitalWrite(15, 1);//Esta es la resistencia del botón gordo.
+	digitalWrite(15, 1);//Esta es la resistencia del botï¿½n gordo.
 	digitalWrite(B_TIMER0, 1);
 	digitalWrite(B_TIMER1, 1);
 
@@ -130,7 +130,7 @@ void setup()
 	alarma1.tiempoProgramado = 900;//Quince minutos.
 
 
-	//Inicializamos la interrupción del rotatory encoder.
+	//Inicializamos la interrupciï¿½n del rotatory encoder.
 	attachInterrupt(digitalPinToInterrupt(3), sumador, RISING);
 }
 
@@ -156,7 +156,7 @@ void loop()
 	}
 	if (standByTimeOut < millis() && !standBy) {//Han pasado cinco segundos, entramos en standby.
 		standBy = 1;
-		if (alarma1.IsSelected)//Con estas 4 líneas alineamos el botón central con lo que se muestra en pantalla.
+		if (alarma1.IsSelected)//Con estas 4 lï¿½neas alineamos el botï¿½n central con lo que se muestra en pantalla.
 			whoIsSelected = 1;
 		else
 			whoIsSelected = 0;
@@ -209,15 +209,15 @@ void loop()
 	
 
 
-	///Qué mostramos en los displays:
+	///Quï¿½ mostramos en los displays:
 	if(standBy){
-		if(flagTiempoEs0)//FlagTiempoEs0=1, mostramos 00:00. Y muestro los dos puntos, el timer está parado.
+		if(flagTiempoEs0)//FlagTiempoEs0=1, mostramos 00:00. Y muestro los dos puntos, el timer estï¿½ parado.
 			display.showNumberDecEx(numeroASegMin(0), B01000000, true, 4, 0);
 		else if (alarma0.IsSelected)//Muestro esta alarma.
 			display.showNumberDecEx(numeroASegMin(alarma0.tiempoReal), B01000000, true, 4, 0);
 		else if (alarma1.IsSelected)//Muestro esta alarma.
 			display.showNumberDecEx(numeroASegMin(alarma1.tiempoReal), B01000000, true, 4, 0);
-		else if (tenemosHora)//Si están los dos temporizadores parados, entonces mostramos la hora.
+		else if (tenemosHora)//Si estï¿½n los dos temporizadores parados, entonces mostramos la hora.
 			mostrarHora();
 		else//No tenemos hora y estamos en standBy:
 			display.clear();
@@ -251,7 +251,7 @@ void loop()
 		delay(25);
 		while (!digitalRead(B_TIMER0));//Esperamos a que lo suelte.
 		whoIsSelected = 0;
-		digitalWrite(L_TIMER1, 0); //Apagamos el otro botón.
+		digitalWrite(L_TIMER1, 0); //Apagamos el otro botï¿½n.
 	}
 
 	if (!digitalRead(B_TIMER1)) {//Recuerda que debe dar un 0 cuando lo pulsamos.
@@ -260,14 +260,14 @@ void loop()
 		delay(25);
 		while (!digitalRead(B_TIMER1));//Esperamos a que lo suelte.
 		whoIsSelected = 1;
-		digitalWrite(L_TIMER0, 0); //Apagamos el otro botón.
+		digitalWrite(L_TIMER0, 0); //Apagamos el otro botï¿½n.
 	}
 
-	///Pulsamos el botón e iniciamos o paramos la cuenta atrás:
+	///Pulsamos el botï¿½n e iniciamos o paramos la cuenta atrï¿½s:
 	if (!digitalRead(15)) {
 		flagInteract = 1;//Hemos interactuado.
 		delay(100);//ELIMINAR, reduce los rebotes.
-		while (!digitalRead(15));//Me espero hasta que suelte el botón.
+		while (!digitalRead(15));//Me espero hasta que suelte el botï¿½n.
 
 		if(whoIsSelected)//Estamos hablando de timer1.
 			if (alarma1.timerIsOn) {//Paramos el timer.
@@ -304,12 +304,12 @@ void loop()
 	if(nextTimeQuery < millis())//Entraremos al principio y luego de vez en cuando.
 		if (tenemosHora) {
 			nextTimeQuery = 604800000 + millis();//Una semana en segundos.
-			preparacionEmisionRF24(8);//Ocho es el número que quiere el otro arduino.
+			preparacionEmisionRF24(8);//Ocho es el nï¿½mero que quiere el otro arduino.
 		}
 		else
 		{
 			nextTimeQuery = 3600000 + millis();//Preguntaremos cada hora.
-			preparacionEmisionRF24(8);//Ocho es el número que quiere el otro arduino.
+			preparacionEmisionRF24(8);//Ocho es el nï¿½mero que quiere el otro arduino.
 		}
 
 	
