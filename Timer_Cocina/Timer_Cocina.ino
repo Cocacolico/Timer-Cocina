@@ -3,7 +3,7 @@ Proyecto del timer de la cocina.
 Hecho por �lvaro D�az-Cano en 2019 y completado en mayo de 2020.
 Nodo del nRF24 = 01.
 */
-//Test de sincro, versión del curro 25-6-20.
+3//Test de sincro, versión del curro 25-6-20.
 
 #include <SPI.h>
 #include <Sync.h>
