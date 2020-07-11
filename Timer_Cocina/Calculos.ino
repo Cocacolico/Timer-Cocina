@@ -83,19 +83,19 @@ void tiempoEs0(){
 		pitarSi();
 	else if (opcion > 2500)
 		pitarNo();
-	else if (opcion > 2000)
+	else if (opcion > 2250)
 		pitarSi();
-	else if (opcion > 1750)
+	else if (opcion > 2000)
 		pitarNo();
+	else if (opcion > 1750)
+		pitarSi();
 	else if (opcion > 1500)
+		pitarNo();
+	else if (opcion > 1250)
 		pitarSi();
 	else if (opcion > 1000)
 		pitarNo();
-	else if (opcion > 750)
-		pitarSi();
 	else if (opcion > 500)
-		pitarNo();
-	else if (opcion > 0)
 		pitarSi();
 }
 

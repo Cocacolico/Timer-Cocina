@@ -3,7 +3,7 @@ Proyecto del timer de la cocina.
 Hecho por �lvaro D�az-Cano en 2019 y completado en mayo de 2020.
 Nodo del nRF24 = 01.
 */
-3//Test de sincro, versión del curro 25-6-20.
+//Test de sincro, versión del curro 25-6-20.
 
 #include <SPI.h>
 #include <Sync.h>
@@ -303,7 +303,7 @@ void loop()
 
 	if(nextTimeQuery < millis())//Entraremos al principio y luego de vez en cuando.
 		if (tenemosHora) {
-			nextTimeQuery = 604800000 + millis();//Una semana en segundos.
+			nextTimeQuery = 1800000 + millis();//Treinta minutos.
 			preparacionEmisionRF24(8);//Ocho es el n�mero que quiere el otro arduino.
 		}
 		else
